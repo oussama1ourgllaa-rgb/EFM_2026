@@ -1,0 +1,154 @@
+MovieContext.jsx
+import { createContext, useReducer } from "react";
+export const MovieContext = createContext();
+
+
+const initialS={movies:[], listwatch:[], favoris:[]};
+
+export const Reducer=(state=initialS,action)=>{
+    switch(action.type){
+            
+        case "ADD_TO_WATCHLIST":
+            const movieWatched=state.movies.filter(m=>m.inWatchlist=== true);
+            return {...state, listwatch:[...state.listwatch, movieWatched]};
+
+            
+        case "REMOVE_FROM_WATCHLIST":
+            return {...state, movies: state.movies.filter(movie => movie.id !== action.payload.id)};
+
+        case "TOGGLE_LIKE":
+            return {
+                ...state,
+                movies: state.movies.map(movie =>
+                    movie.id === action.payload.id ? { ...movie, liked: !movie.liked } : movie
+                )
+            };
+        default:
+            return state;
+    }
+}
+
+export const MovieProvider=({children})=>{
+    const [state, dispatch] = useReducer(Reducer, initialS);
+    return (
+        <MovieContext.Provider value={{state, dispatch}}>
+        {children}
+        </MovieContext.Provider>
+    );
+}
+
+
+
+
+
+MovieCard.jsx
+import { useContext } from "react";
+import { MovieContext } from "../Components/MovieContext";
+
+const MovieCard=({movie})=>{
+   const {dispatch}=useContext(MovieContext);
+
+        return (
+            <div className="col-md-4">
+               <div className="card h-100">
+                 <img src={movie.image} className="card-img-top" alt={movie.title} style={{objectFit:"contain",height:"220px"}}/>
+                   <div className="card-body d-flex flex-column">
+                       <h4 className="card-title">{movie.title}</h4>
+                       <p className="d-flex justify-content-between">
+                        <span className="badge bg-success">{movie.genre}</span>
+                        <span className="badge bg-info">{movie.year}</span>
+                       </p>
+                        <button type="button" onClick={()=>dispatch({type:"ADD_TO_WATCHLIST",payload:movie})}  className="btn btn-primary btn-sm">Add To Watchlist</button>
+                        <button type="button" onClick={()=>dispatch({type:"REMOVE_FROM_WATCHLIST",payload:movie})}  className="btn btn-danger btn-sm">Remove From Watchlist</button>
+                        <button type="button" onClick={()=>dispatch({type:"TOGGLE_LIKE",payload:movie})}  className="btn btn-warning btn-sm">{movie.liked ? "Unlike" : "Like"}</button>
+                   </div>
+               </div>
+            </div>
+        )
+
+}
+export default MovieCard;
+
+
+
+
+
+
+Navbar.jsx
+import {Link} from "react-router-dom";
+import { useContext } from "react";
+import { MovieContext } from "../Components/MovieContext";
+const Navbar = () => {
+    return(
+        <nav className="navbar bg-dark navbar-dark">
+            <div className="container">
+
+                <Link className="navbar-brand" to="/">
+                    MovieBox
+                </Link>
+
+                <div className="navbar-nav d-flex flex-row">
+
+                    <Link className="nav-link mx-2" to="/tous">
+                        Tous
+                    </Link>
+
+                    <Link className="nav-link me-3 position-relative" to="/watchlist">
+                        WatchList
+                    </Link>
+                    <Link className="nav-link me-3 position-relative" to="/favoris">
+                        Favoris
+                        <span className="badge bg-danger position-absolute top-0"></span>
+                    </Link>
+
+                </div>
+
+            </div>
+    </nav>
+    )
+}
+export default Navbar;
+
+
+
+
+
+
+
+
+
+
+app.jsx
+import {BrowserRouter, Routes, Route} from 'react-router-dom';
+import Navbar from './pages/Navbar';
+import {MovieProvider, MovieContext} from './Components/MovieContext';
+import { useState, useContext, useEffect } from 'react';
+import MovieCard from './Components/MovieCard';
+
+const App=()=>{
+  const [movies, setMovies] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:3008/movies')
+      .then(res => res.json())
+      .then(data => setMovies(data));
+  }, []);
+
+
+  return (
+    <MovieProvider>
+      <BrowserRouter>
+        <Navbar/>
+        <Routes>
+           <Route path="/" element={<MovieCard movies={movies} />}/>
+           <Route path="/tous" element={<MovieCard movies={movies} />}/> 
+           <Route path="/watchlist" element={<WatchList movies={}/>}/>  
+           <Route path="/favoris" element={<Favoris/>}/>  
+        </Routes>   
+      </BrowserRouter> 
+      </MovieProvider>
+      
+  )
+}
+
+export default App;
